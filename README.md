@@ -100,26 +100,29 @@ The system uses 18 interconnected tables:
 
 **Note**: Payroll tables (`payroll_cycles`, `payroll_items`) are defined in the schema but **intentionally not implemented**. Payroll and compensation are managed separately by the temple's financial department, keeping the volunteer management system focused on service tracking and recognition.
 
-## API Documentation
+## Documentation
 
-The system exposes a tRPC API for external integration. See [API.md](./API.md) for complete endpoint documentation.
+### Core Documentation
+- **[TODO.md](./TODO.md)** - Development roadmap and task tracking
+- **[API.md](./API.md)** - Complete API reference
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Deployment and production setup guide
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Technical architecture
+- **[userGuide.md](./userGuide.md)** - End-user guide
 
-**Base URL**: `https://your-domain.com/api/trpc`
+### Audit & Status
+- **[CODEBASE_AUDIT_2025-11-01.md](./CODEBASE_AUDIT_2025-11-01.md)** - Comprehensive codebase audit (Nov 1, 2025)
 
-**Key Endpoints:**
-- `GET /auth.me` - Get current user
-- `GET /points.summary` - Get user rank and points
-- `GET /rewards.list` - List available rewards
-- `POST /redeem.create` - Redeem a reward
-- `POST /attendance.confirm` - Confirm volunteer attendance
+### Feature Guides
+- **[docs/guides/](./docs/guides/)** - Detailed guides for specific features
+  - OAuth & User Management Architecture
+  - Bonus Point Approval Process
+  - Business Configuration (业务配置文档)
 
-## Development Documentation
+### Quality Assurance
+- **[docs/QA_TEST_RESULTS.md](./docs/QA_TEST_RESULTS.md)** - Test results and validation
 
-For detailed technical documentation including architecture, business logic, security considerations, and potential issues, see [DEVELOPMENT.md](./DEVELOPMENT.md).
-
-## User Guide
-
-For end-user instructions on using the application, see [userGuide.md](./userGuide.md).
+### Historical Documentation
+- **[docs/archive/](./docs/archive/)** - Archived historical documentation and status reports
 
 ## Project Structure
 
