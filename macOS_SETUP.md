@@ -94,7 +94,7 @@ docker ps
 ### Step 1: Navigate to Project Directory
 
 ```bash
-cd /path/to/xianghai_volunteer_record
+cd /path/to/xhvolunteer
 ```
 
 ### Step 2: Install Dependencies
@@ -245,7 +245,7 @@ brew install mysql
 brew services start mysql
 
 # Project setup
-cd xianghai_volunteer_record
+cd xhvolunteer
 pnpm install
 pnpm db:migrate
 pnpm db:seed
