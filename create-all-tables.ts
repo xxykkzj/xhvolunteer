@@ -5,6 +5,15 @@ import dotenv from "dotenv";
 dotenv.config();
 
 async function createAllTables() {
+  // Debug: Check if DATABASE_URL is loaded
+  if (!process.env.DATABASE_URL) {
+    console.error("❌ ERROR: DATABASE_URL is not set!");
+    console.error("Please check that .env file exists and contains DATABASE_URL");
+    console.error("Current working directory:", process.cwd());
+    process.exit(1);
+  }
+
+  console.log("✓ DATABASE_URL loaded successfully");
   const connection = await mysql.createConnection(process.env.DATABASE_URL!);
 
   console.log("Creating all tables for volunteer management system...");
