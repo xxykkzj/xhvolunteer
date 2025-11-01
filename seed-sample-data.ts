@@ -1,10 +1,15 @@
 /**
  * Seed sample data for development and testing
- * Run with: tsx scripts/seed-sample-data.ts
+ * Run with: tsx seed-sample-data.ts
  */
 
-import { getDb } from "../server/db";
-import { departments, badges } from "../drizzle/schema";
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
+
+import { getDb } from "./db";
+import { departments, badges } from "./drizzle/schema";
 
 async function seedSampleData() {
   const db = await getDb();

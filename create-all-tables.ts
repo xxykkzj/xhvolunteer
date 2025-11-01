@@ -1,4 +1,8 @@
 import mysql from "mysql2/promise";
+import dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 async function createAllTables() {
   const connection = await mysql.createConnection(process.env.DATABASE_URL!);
