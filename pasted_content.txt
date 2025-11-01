@@ -1,0 +1,257 @@
+) ENGINE=InnoDB;
+
+-- 等级快照 + 欢喜徽记
+CREATE TABLE user_rank_snapshot (
+  user_id BIGINT PRIMARY KEY,
+  total_hours DECIMAL(10,2) NOT NULL DEFAULT 0,
+  total_points BIGINT NOT NULL DEFAULT 0,
+  rank_level TINYINT NOT NULL DEFAULT 1, -- 1..7
+  joy_badge TINYINT(1) NOT NULL DEFAULT 0,
+  joy_granted_at DATETIME NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES user(id)
+) ENGINE=InnoDB;
+
+-- 奖励与核销
+CREATE TABLE reward (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(128) NOT NULL,
+  description VARCHAR(512),
+  image_url VARCHAR(255),
+  points_cost INT NOT NULL,
+  min_level_required TINYINT NOT NULL DEFAULT 1, -- 1..7
+  require_joy_badge TINYINT(1) NOT NULL DEFAULT 0,
+  stock INT NULL, -- -1 表示不限
+  status ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_by BIGINT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES user(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE redeem_order (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  reward_id BIGINT NOT NULL,
+  points_cost INT NOT NULL,
+  code_payload VARCHAR(64) NOT NULL,
+  code_qr_sig VARCHAR(128) NOT NULL,
+  expires_at DATETIME NULL, -- NULL/0=不限期
+  status ENUM('pending','used','canceled','expired') NOT NULL DEFAULT 'pending',
+  used_by BIGINT NULL,
+  used_at DATETIME NULL,
+  department_id BIGINT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES user(id),
+  FOREIGN KEY (reward_id) REFERENCES reward(id),
+  FOREIGN KEY (used_by) REFERENCES user(id),
+  FOREIGN KEY (department_id) REFERENCES department(id)
+) ENGINE=InnoDB;
+
+-- 薪资（寺工）
+CREATE TABLE payroll_cycle (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  year_month CHAR(7) NOT NULL,
+  department_id BIGINT NULL,
+  status ENUM('open','locked','approved','exported') NOT NULL DEFAULT 'open',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  approved_by BIGINT NULL,
+  approved_at DATETIME NULL,
+  UNIQUE KEY uk_payroll_month_dept(year_month, department_id),
+  FOREIGN KEY (department_id) REFERENCES department(id),
+  FOREIGN KEY (approved_by) REFERENCES user(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE payroll_item (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  payroll_cycle_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  engagement_id BIGINT NOT NULL,
+  paid_hours DECIMAL(8,2) NOT NULL DEFAULT 0,
+  hourly_rate DECIMAL(10,2) NULL,
+  base_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  bonus_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  deduction_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  final_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  note VARCHAR(255),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (payroll_cycle_id) REFERENCES payroll_cycle(id),
+  FOREIGN KEY (user_id) REFERENCES user(id),
+  FOREIGN KEY (engagement_id) REFERENCES engagement(id),
+  INDEX idx_payroll_user (user_id, engagement_id)
+) ENGINE=InnoDB;
+
+-- 审计
+CREATE TABLE audit_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  actor_user_id BIGINT NOT NULL,
+  action VARCHAR(64) NOT NULL,
+  target_table VARCHAR(64),
+  target_id BIGINT,
+  detail_json JSON,
+  ip VARCHAR(64),
+  ua VARCHAR(255),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (actor_user_id) REFERENCES user(id)
+) ENGINE=InnoDB;
+```
+
+---
+
+## 7) 关键业务规则（计算口径）
+
+- **等级计算（七地）**：`rank_level = f(total_points)`，依据 §4 中的区间（左闭右开）。  
+- **欢喜徽记**：若 `total_hours >= 70 && joy_badge=0` → `joy_badge=1, joy_granted_at=NOW()`。  
+- **积分入账**：  
+  - 出勤：`attendance_eval`（额外志愿或允许的带薪计分）。  
+  - 奖励：`dept_bonus`（受部门当月 `dept_month_quota` 限制）。  
+  - 兑换：`redeem`（扣分为负）。  
+  - 人工：`manual_adjust`。  
+- **短期义工**：创建 engagement 校验 `end_date - start_date >= 14` 天。  
+- **寺工出勤**：`paid_flag=1` 计薪，默认不计分（除非 `allow_points_on_paid_hours=1` 或 `overtime_hours>0`）。
+
+**兑换校验伪代码**：
+
+```ts
+function canRedeem(user, reward) {
+  const levelOk = user.rank_level >= reward.min_level_required;
+  const pointsOk = user.available_points >= reward.points_cost;
+  const joyOk = reward.require_joy_badge ? user.joy_badge === 1 : true;
+  const stockOk = reward.stock === -1 || reward.stock > 0;
+  const statusOk = reward.status === 'active';
+  return levelOk && pointsOk && joyOk && stockOk && statusOk;
+}
+```
+
+---
+
+## 8) API 契约（NestJS 风格）
+
+**Auth**  
+- `POST /auth/wechatLogin { code }` → `{ token, user }`（模拟 code2Session）  
+- `GET /me` → 当前用户（按角色隐藏敏感字段）
+
+**Engagement**  
+- `POST /engagement`（admin/manager）创建短期义工/寺工（对短期义工校验≥14天）  
+- `PATCH /engagement/:id`（admin/manager）  
+- `GET /engagement?user_id=&type=&status=`  
+- `POST /engagement/:id/terminate`（admin/manager）
+
+**Rota/排班**  
+- `POST /rota`、`GET /rota?engagement_id=`  
+- `POST /rota/generate { month }` → 写入 `schedule_day/assignment`  
+- `GET /schedule?date=&department_id=`  
+- `POST /schedule/day`、`POST /schedule/assign`
+
+**出勤**  
+- `POST /attendance/confirm`  
+  - 入参：`{ date, department_id, user_id, engagement_id, status, actual_hours, paid_flag, overtime_hours, comment }`  
+  - 侧效：写 `attendance_daily`、`hours_ledger`、必要时 `point_ledger`，刷新 `user_rank_snapshot` 与“欢喜”徽记。
+
+**积分/等级/徽记**  
+- `GET /points/summary?user_id=`（含 `rank_level`, `total_points`, `total_hours`, `joy_badge`）  
+- `GET /points/ledger?user_id=&page=`  
+- `POST /points/bonus/request`（manager）  
+- `POST /points/bonus/approve`（manager/admin）  
+- `POST /points/adjust`（admin/super-admin）
+
+**配额**  
+- `GET /quota?department_id=&year_month=`  
+- `POST /quota/set`（admin/super-admin）
+
+**奖品 & 兑换 & 核销**  
+- `GET /rewards`  
+- `POST /rewards`、`PATCH /rewards/:id`（admin/super-admin）  
+- `POST /redeem { reward_id }` → 生成兑换单（条码/二维码：`order_id|user_id|exp_ts|sig`）  
+- `POST /redeem/verify { code }`（leader/manager/admin/super-admin）  
+- `GET /redeem/my`
+
+**薪资（寺工）**  
+- `POST /payroll/cycle { year_month, department_id }`  
+- `POST /payroll/close { cycle_id }` → 生成 `payroll_item`  
+- `POST /payroll/approve { cycle_id }`（admin/super-admin）  
+- `GET /payroll/items?cycle_id=&department_id=&user_id=`  
+- `GET /payroll/export?cycle_id=`
+
+**审计**  
+- `GET /audit?actor_user_id=&target_table=&date_from=&date_to=`
+
+---
+
+## 9) 前端要点
+
+- **小程序**：佛教黄色主题；页面：  
+  1) 首页（七地徽章、总积分、累计时长、欢喜徽记）  
+  2) 排班/日终确认（leader/manager）  
+  3) 积分与奖励（申请/审批）  
+  4) 奖品列表/详情（按等级/欢喜状态标注“可兑换/待解锁”）  
+  5) 我的兑换码（条码 + 二维码）与历史  
+  6) 个人资料（紧急联系人；身份证不展示）  
+  7) 管理入口（精简）
+
+- **Web 管理端**：配置、配额、薪资、审计报表与导出。
+
+---
+
+## 10) 安全与合规
+
+- 身份证字段使用 **AES-256-CBC**（`AES_KEY`, `AES_IV`）加/解密；仅 admin/super-admin 控制器返回。  
+- JWT（`JWT_SECRET`），基于角色的守卫；参数校验（class-validator）。  
+- 审计：关键动作写入 `audit_log`（含 actor、target、详情）。  
+- 核销防重放：`sig=HMAC-SHA256(order_id|user_id|exp_ts, HMAC_SECRET)`；核销接口**事务 + 行级锁/幂等**。  
+- 日志脱敏；错误码统一。
+
+---
+
+## 11) 配置与环境变量（必要参数）
+
+- `DB_URL`（MySQL 连接）  
+- `JWT_SECRET`  
+- `HMAC_SECRET`（核销码签名）  
+- `AES_KEY`, `AES_IV`（身份证加密）  
+- `ALIYUN_OSS_*`（导出/二维码存储）  
+- `HOURS_JOY_BADGE_THRESHOLD=70`  
+- `LEVEL_RULES`（建议内置为常量，也可落库配置）
+
+---
+
+## 12) 部署（阿里云）
+
+- **RDS MySQL 8**：运行 TypeORM 迁移。  
+- **服务**：ECS/SAE 部署 NestJS；开放健康检查与必要端口。  
+- **OSS**：用于报表/二维码图片；配置访问凭证。  
+- **小程序**：配置业务域名白名单，打包上传。  
+- **docker-compose**：提供本地/测试一键启动方案。
+
+---
+
+## 13) 测试与验收
+
+**单元测试（≥6）**  
+1) 短期义工服务期校验（≥14 天）。  
+2) 出勤确认写入 `hours_ledger` 与快照刷新。  
+3) 寺工带薪出勤**不计分**；额外志愿计分。  
+4) 达到 70 小时自动授“欢喜”徽记。  
+5) 兑换门槛校验（等级 + 积分 + 欢喜徽记）。  
+6) 核销幂等与签名校验通过；并发安全。
+
+**E2E（≥2）**  
+- 流水线：排班 → 出勤 → 等级&欢喜 → 兑换 → 核销。  
+- 奖励配额审批：申请 → 审批 → 入账。
+
+**验收标准**  
+- OpenAPI 文档完整；前后端可联调上述流程；管理员可导出薪资与审计报表。
+
+---
+
+## 14) 默认种子数据（建议）
+
+- 部门：图书馆、福田中心、客房部。  
+- 角色账号各 1 名（volunteer/leader/manager/admin/super-admin）。  
+- 奖品示例：  
+  - A「结缘书籍」`points_cost=100`, `min_level_required=1`, `require_joy_badge=false`  
+  - B「福田义工餐卷」`points_cost=300`, `min_level_required=3`, `require_joy_badge=true`  
+  - C「禅修日体验」`points_cost=800`, `min_level_required=5`, `require_joy_badge=true`
+
+---
+
+> **开发要求**：分层清晰（modules/services/controllers/repositories）、DTO 校验、统一错误码、事务与幂等（兑换/核销）、`user_rank_snapshot` 更新封装为领域服务、ESLint/Prettier、提交钩子、README（启动/迁移/环境变量/阿里云部署步骤）。
