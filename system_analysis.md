@@ -1,5 +1,24 @@
 # Volunteer Management System - Analysis Document
 
+> **⚠️ IMPORTANT NOTICE**
+> **This document represents the INITIAL PLANNING AND REQUIREMENTS** from the project's conception phase.
+> **The actual implementation differs significantly from what is described here.**
+>
+> **Key Differences:**
+> - **Planned**: NestJS backend → **Actual**: Express + tRPC
+> - **Planned**: WeChat Mini Program → **Actual**: React Web Application
+> - **Planned**: TypeORM → **Actual**: Drizzle ORM
+> - **Planned**: Native WeChat Mini Program → **Actual**: Web-based responsive UI
+>
+> **For current implementation details, see:**
+> - [README.md](./README.md) - Current project overview
+> - [DEVELOPMENT.md](./DEVELOPMENT.md) - Current technical architecture
+> - [寺院志愿者管理系统 - 当前状态分析.md](./寺院志愿者管理系统%20-%20当前状态分析.md) - Current status analysis
+>
+> This document is retained for historical reference and to understand the original requirements that shaped the project.
+
+---
+
 ## Project Overview
 
 This is a comprehensive **Volunteer Management + Time Bank + Multi-terminal Verification** system for a temple/monastery, with a focus on:
