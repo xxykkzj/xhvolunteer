@@ -45,21 +45,28 @@ A comprehensive web application for managing volunteer services at Buddhist temp
 
 ### Installation
 
-**Note**: This project does not yet have a `package.json` file. The build/run process and dependencies need to be set up. The following is the planned installation process:
+**Note**: This project does not yet have a `package.json` file. The build/run process and dependencies need to be set up.
+
+For detailed installation and deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+**Quick Start (once package.json is created):**
 
 ```bash
 # Install dependencies
 pnpm install
 
 # Set up environment variables
-cp .env.example .env
+cp .env.development .env
+# Or copy .env.example and customize
+
 # Edit .env with your database credentials
+nano .env
 
 # Create database schema
-pnpm tsx scripts/create-all-tables.ts
+pnpm tsx create-all-tables.ts
 
-# Seed initial data (optional)
-pnpm tsx scripts/seed-data.ts
+# Seed sample data (optional)
+pnpm tsx seed-sample-data.ts
 
 # Start development server
 pnpm dev
@@ -91,7 +98,7 @@ The system uses 18 interconnected tables:
 - **Quota**: `dept_month_quota`, `dept_bonus_requests`
 - **Audit**: `audit_logs`
 
-**Note**: Payroll tables (`payroll_cycles`, `payroll_items`) are defined but not currently implemented in the application.
+**Note**: Payroll tables (`payroll_cycles`, `payroll_items`) are defined in the schema but **intentionally not implemented**. Payroll and compensation are managed separately by the temple's financial department, keeping the volunteer management system focused on service tracking and recognition.
 
 ## API Documentation
 

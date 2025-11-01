@@ -132,8 +132,8 @@ A comprehensive web application for managing volunteer services at Buddhist temp
 **Audit Domain:**
 - `audit_logs` - Comprehensive action audit trail
 
-**Payroll Domain (Defined but Unused):**
-- `payroll_cycles`, `payroll_items` - Tables created but not implemented
+**Payroll Domain (Intentionally Not Implemented):**
+- `payroll_cycles`, `payroll_items` - Tables defined in schema but **intentionally not implemented**. Temple worker compensation is managed separately by the financial department. These tables exist for potential future use if requirements change, but are not part of the current system scope.
 
 ### Schema Quality
 
@@ -197,9 +197,11 @@ A comprehensive web application for managing volunteer services at Buddhist temp
 
 ### ❌ Missing Features
 
-**Phase 9: Payroll System** ⏳ 0%
-- Tables created but not implemented
-- May not be needed based on business requirements
+**Phase 9: Payroll System** ❌ Intentionally Excluded
+- **Decision**: Payroll is NOT part of this system's scope
+- **Rationale**: Temple worker compensation is managed separately by the financial department
+- **Status**: Tables exist in schema but will remain unimplemented
+- **Impact**: No development needed - this is the correct approach
 
 **Phase 10: Reports & Analytics** ⏳ 50%
 - Audit logging working

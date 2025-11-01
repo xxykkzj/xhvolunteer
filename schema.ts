@@ -379,6 +379,13 @@ export const redeemOrders = mysqlTable("redeem_orders", {
 
 /**
  * Payroll cycles for temple workers
+ *
+ * ⚠️ INTENTIONALLY NOT IMPLEMENTED
+ * These tables are defined but not used in the application.
+ * Temple worker compensation is managed separately by the financial department.
+ * The volunteer management system focuses on service tracking and recognition only.
+ *
+ * These tables are retained in the schema for potential future use if requirements change.
  */
 export const payrollCycles = mysqlTable(
   "payroll_cycles",
@@ -400,6 +407,9 @@ export const payrollCycles = mysqlTable(
 
 /**
  * Payroll items for individual temple workers
+ *
+ * ⚠️ INTENTIONALLY NOT IMPLEMENTED
+ * See comment on payrollCycles table above.
  */
 export const payrollItems = mysqlTable(
   "payroll_items",

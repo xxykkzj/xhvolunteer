@@ -1,0 +1,49 @@
+# Environment files
+.env
+.env.local
+.env.production
+
+# Keep example and development templates
+!.env.example
+!.env.development
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets (additional safety)
+secrets/
+*.key
+*.pem
